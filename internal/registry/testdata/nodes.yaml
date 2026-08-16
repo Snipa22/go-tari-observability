@@ -1,0 +1,19 @@
+nodes:
+  - name: seed-01
+    tier: seed
+    pubkey: "abc123"
+    ip: "10.0.0.1"
+    p2p_port: 18189
+    grpc_port: 18142
+  - name: priority-01
+    tier: priority
+    pubkey: "def456"
+    ip: "10.0.0.2"
+    p2p_port: 18189
+    grpc_port: 18142
+  - name: priority-02
+    tier: priority
+    pubkey: "ghi789"
+    ip: "10.0.0.3"
+    p2p_port: 18189
+    grpc_port: 19999

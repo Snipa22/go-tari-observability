@@ -1,0 +1,30 @@
+# Prometheus alerting *rules* file (loaded by Prometheus itself via rule_files, not an
+# Alertmanager config) for go-tari-observability.
+groups:
+  - name: tari-observability
+    rules:
+      - alert: TariPriorityNodeDown
+        expr: tari_node_up{tier="priority"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Tari priority node {{ $labels.node_name }} ({{ $labels.ip }}) is down"
+          description: >
+            Priority node {{ $labels.node_name }} has reported tari_node_up == 0 for at
+            least 2 minutes. Losing enough priority nodes can halt the Tari network for
+            on the order of 30 minutes — treat this as critical and page immediately.
+
+      - alert: TariNodeSyncLagHigh
+        expr: tari_node_sync_lag > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tari node {{ $labels.node_name }} ({{ $labels.ip }}) is lagging behind the network tip"
+          description: >
+            Node {{ $labels.node_name }} has reported a sync lag greater than 10 blocks
+            relative to the tallest node in this registry for at least 5 minutes
+            ({{ $value }} blocks behind). Best-effort metric: sync lag is computed
+            against the tallest height successfully polled this cycle, not a
+            ground-truth network tip.

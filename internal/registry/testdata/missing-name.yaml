@@ -1,0 +1,6 @@
+nodes:
+  - tier: seed
+    pubkey: "abc123"
+    ip: "10.0.0.1"
+    p2p_port: 18189
+    grpc_port: 18142

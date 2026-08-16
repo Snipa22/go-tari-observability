@@ -1,0 +1,4 @@
+nodes:
+  - name: "seed-01"
+  tier: seed
+    pubkey: "x"
