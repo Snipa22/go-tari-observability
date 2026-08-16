@@ -60,6 +60,18 @@ var (
 		Name: "tari_node_hash_rate",
 		Help: "Best-effort per-algorithm estimated network hash rate as reported by GetNetworkDifficulty.",
 	}, []string{"node_name", "tier", "ip", "algo"})
+
+	// nodeInfo is the standard Prometheus "info" pattern for a near-static string
+	// value (version) that shouldn't be a metric value itself: always set to 1,
+	// with the version carried as a label. A version change across a poll cycle
+	// re-registers the series under the new label value rather than mutating a
+	// numeric metric in place — exactly what you want for "what version is this
+	// node on right now, and when did that change" queries in Grafana/PromQL
+	// (e.g. count(tari_node_info) by (version)).
+	nodeInfo = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "tari_node_info",
+		Help: "Always 1. Carries the node's reported version as a label (GetVersion). Absent for a node/cycle where the version wasn't obtained.",
+	}, []string{"node_name", "tier", "ip", "version"})
 )
 
 func init() {
@@ -72,6 +84,7 @@ func init() {
 		nodeLastScrapeSuccess,
 		nodeNetworkDifficulty,
 		nodeHashRate,
+		nodeInfo,
 	)
 }
 
@@ -259,11 +272,15 @@ func recordMetrics(results []collector.Result) {
 			nodeHashRate.With(prometheus.Labels{"node_name": r.Node.Name, "tier": r.Node.Tier, "ip": r.Node.IP, "algo": "monero_randomx"}).Set(float64(r.MoneroRandomXHashRate))
 			nodeHashRate.With(prometheus.Labels{"node_name": r.Node.Name, "tier": r.Node.Tier, "ip": r.Node.IP, "algo": "tari_randomx"}).Set(float64(r.TariRandomXHashRate))
 		}
-		// r.VersionOK / r.Version is not currently exposed as a metric: Prometheus
+		// r.VersionOK / r.Version is exposed via the tari_node_info "info gauge"
+		// pattern rather than as a label on the numeric metrics above: Prometheus
 		// labels are meant for low-cardinality, near-static dimensions, and a
-		// version string changing across a fleet mid-rollout would churn label
-		// sets. Surfacing it cleanly (e.g. an info-style gauge) is left as a
-		// follow-up rather than bolted on here without a real usage pattern.
+		// version string changing across a fleet mid-rollout would churn every
+		// other metric's label set if it were attached there instead. See
+		// nodeInfo's doc comment for the query pattern this enables.
+		if r.VersionOK {
+			nodeInfo.With(prometheus.Labels{"node_name": r.Node.Name, "tier": r.Node.Tier, "ip": r.Node.IP, "version": r.Version}).Set(1)
+		}
 	}
 }
 

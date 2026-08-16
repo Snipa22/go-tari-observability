@@ -114,6 +114,25 @@ Postgres is the source of truth (see Architecture above).
 list consumed by `tari-registry-bootstrap` — it is not read by the exporter or by
 `tari-netstat probe`'s default (`--dsn`) path.
 
+## Metrics exposed by `tari-exporter`
+
+All series are labeled `node_name`, `tier`, `ip` (plus one extra label noted below).
+
+| Metric | Source RPC | Notes |
+|---|---|---|
+| `tari_node_up` | `GetTipInfo` | 1/0 reachability |
+| `tari_node_height` | `GetTipInfo` | chain tip height |
+| `tari_node_peer_count` | `ListConnectedPeers` | connected peer count |
+| `tari_node_mempool_size` | `GetMempoolStats` | unconfirmed tx count |
+| `tari_node_sync_lag` | derived | max height across the poll cycle minus this node's height |
+| `tari_node_last_scrape_success_timestamp_seconds` | derived | last time this node responded successfully |
+| `tari_node_network_difficulty` | `GetNetworkDifficulty` | total, not split per algo (see below) |
+| `tari_node_hash_rate` | `GetNetworkDifficulty` | per-algo estimated hash rate, extra label `algo` (`sha3x`\|`monero_randomx`\|`tari_randomx`) |
+| `tari_node_info` | `GetVersion` | standard Prometheus "info" pattern — always `1`, version carried as the extra label `version`. Query rollout state with `count(tari_node_info) by (version)`. Absent for a node/cycle where the version wasn't obtained (best-effort, never fabricated). |
+
+Deeper per-node scraping (sync-state detail, block-propagation timing, consensus/fork
+divergence) is scoped as a fast-follow, not yet implemented — see Known gaps below.
+
 ## Deploy templates
 
 - [`deploy/prometheus/scrape-config.yml`](deploy/prometheus/scrape-config.yml) — scrape
