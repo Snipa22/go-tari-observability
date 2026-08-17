@@ -16,6 +16,11 @@ the network for on the order of 30 minutes.
   list live from Postgres and polls every node on an interval, exposing `/metrics`
   (Prometheus text exposition format) and `/healthz`. The node list can grow/shrink at
   runtime as Postgres changes — no restart required.
+- **`cmd/tari-p2p-exporter`** — long-running Prometheus exporter, separate process from
+  `tari-exporter`. Reads the same Postgres node registry, but probes each node's **P2P
+  layer** (Noise_XX handshake + Tari comms identity-exchange, via
+  `github.com/Snipa22/go-tari-lib`'s `p2p` package) instead of its gRPC API. See
+  "P2P-layer exporter" below for details and current scope.
 - **`cmd/tari-netstat`** — CLI companion.
   - `tari-netstat snapshot` (default) — reads a running exporter's `/metrics` and prints
     a human-readable table, priority tier first. Unaffected by the registry redesign
@@ -142,6 +147,66 @@ divergence) is scoped as a fast-follow, not yet implemented — see Known gaps b
 - [`deploy/alertmanager/tari-priority-node-rules.yml`](deploy/alertmanager/tari-priority-node-rules.yml)
   — Prometheus alerting *rules* (loaded by Prometheus, not Alertmanager itself):
   `TariPriorityNodeDown` and `TariNodeSyncLagHigh`.
+
+## P2P-layer exporter (`tari-p2p-exporter`)
+
+`tari-p2p-exporter` is a new, **separate** binary/process from `tari-exporter`. It reads
+the same Postgres node registry, but instead of calling the node's gRPC API it dials the
+node's **P2P/comms port** (`p2p_port` in the registry — historically `18189` in this
+ecosystem, distinct from the gRPC ports `18102`/`18142`) and performs:
+
+1. The Tari comms `Noise_XX` handshake (as initiator), recovering the peer's 32-byte
+   Ristretto255 static public key.
+2. The Tari comms identity-exchange protocol on top of that Noise session, recovering
+   the peer's advertised addresses, feature bitmask, supported protocols, user agent,
+   and (if present) identity signature.
+
+This is done via `github.com/Snipa22/go-tari-lib`'s new `p2p` package (`p2p.Probe`), and
+via `internal/p2pcollector`, which mirrors the shape/conventions of `internal/collector`
+(per-node bounded timeout, one dead peer never blocks polling the rest, explicit
+success/failure in the result rather than a bare error).
+
+**Why a separate process, not a mode on `tari-exporter`:** isolated blast radius. A
+Noise handshake / identity-exchange probe is a heavier, less battle-tested code path
+than the existing gRPC polling — running it in its own process means a bug or hang in
+the P2P probe can't take down the existing gRPC-based exporter, and each can be
+restarted/deployed independently.
+
+**Scope — read before relying on this for anything beyond reachability:** this is an
+early/basic P2P integration. It implements **connect + identity exchange only** — it
+does **not** implement RPC-over-P2P, full peer-management/address-book logic, or
+liveness-wire-mode, and it does not decode the peer `features` bitmask (exposed as a raw
+undecoded value). Deeper P2P stats and RPC-over-P2P support are future work landing
+separately in `go-tari-lib`, not yet available.
+
+### Running
+
+```sh
+go build -o bin/tari-p2p-exporter ./cmd/tari-p2p-exporter
+export TARI_OBSERVABILITY_DSN="postgres://user:***@localhost:5432/tari_observability?sslmode=disable"
+./bin/tari-p2p-exporter --listen :9470 --poll-interval 60s &
+curl localhost:9470/metrics
+curl localhost:9470/healthz
+```
+
+`tari-exporter` already listens on `:9469`; `tari-p2p-exporter` defaults to `:9470` so
+both can run side by side without a port clash. P2P handshakes are heavier than a single
+gRPC call, so the default `--poll-interval` (`60s`) and `--registry-refresh-interval`
+(`60s`) are both slower than `tari-exporter`'s — don't lower them without considering the
+load a full Noise handshake + identity exchange puts on every peer in the registry.
+
+### Metrics exposed by `tari-p2p-exporter`
+
+All series are labeled `node_name`, `tier`, `ip` (plus extra labels noted below).
+
+| Metric | Notes |
+|---|---|
+| `tari_p2p_reachable` | 1/0 — 1 only if the Noise_XX handshake *and* identity exchange both completed |
+| `tari_p2p_handshake_latency_seconds` | wall-clock time for the full probe (dial + handshake + identity exchange); only set when reachable |
+| `tari_p2p_info` | standard Prometheus "info" pattern — always `1`, extra labels `user_agent` and `pubkey_prefix` (first 8 hex chars of the peer's recovered static pubkey only — the full pubkey is never put in a label, to keep label cardinality/entropy bounded) |
+| `tari_p2p_peer_features` | raw `features` bitmask reported by the peer — **bit-meaning is not yet decoded/known upstream**, this is the raw undecoded value |
+| `tari_p2p_advertised_address_count` | number of addresses the peer advertised in its identity message |
+| `tari_p2p_identity_signature_present` | 1/0 — whether the peer included an `identity_signature` |
 
 ## Known gaps
 
