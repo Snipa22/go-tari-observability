@@ -10,6 +10,12 @@
 #
 # grpc_port values below are corrected per direct verification: seed tier uses the
 # base-node default 18142, priority tier uses 18102.
+#
+# Seed tier list replaced 2026-08-16 with Alex's directly-verified set of 9 IPs
+# (dropped 4 unverified entries from the original mainnet peer_seeds extraction:
+# 184.164.76.218, 162.218.117.106, 162.218.117.98, 184.164.76.210). Pubkeys for the
+# 3 newly added entries (23.226.69.178, 23.226.69.234, 107.167.84.90) confirmed by
+# Alex from the live mainnet peer_seeds list.
 nodes:
   - name: seed-01
     tier: seed
@@ -31,44 +37,38 @@ nodes:
     grpc_port: 18142
   - name: seed-04
     tier: seed
-    pubkey: "88b6a3bcc65d3f5b7d7012139ad19f7dccc1a61db85a754ad0f459f3dc34d733"
-    ip: "184.164.76.218"
-    p2p_port: 18189
-    grpc_port: 18142
-  - name: seed-05
-    tier: seed
-    pubkey: "7af90c1e741fdd79820ed5bd7ba0f1bff5d4f0625d3c67ee8fb764e29ec5ea52"
-    ip: "162.218.117.106"
-    p2p_port: 18189
-    grpc_port: 18142
-  - name: seed-06
-    tier: seed
-    pubkey: "d4c7f58cf7a6c02bce28f1cc396ab762e4cd3dda3b32d62f2ef8ab2a47aa2c04"
-    ip: "162.218.117.98"
-    p2p_port: 18189
-    grpc_port: 18142
-  - name: seed-07
-    tier: seed
-    pubkey: "24cf8f6db80557d702341957da22d5e61156e29fbee27d9e116946d9c361655a"
-    ip: "184.164.76.210"
-    p2p_port: 18189
-    grpc_port: 18142
-  - name: seed-08
-    tier: seed
     pubkey: "d0fb4cc5d140c7e053fe1284901dbbae4fd3a0366894ddec580b5c5cdc851245"
     ip: "15.235.227.47"
     p2p_port: 18189
     grpc_port: 18142
-  - name: seed-09
+  - name: seed-05
     tier: seed
     pubkey: "da43bc49d67632bcd6576633b603d631dcf3d5661cb152fa190c849d249d0d62"
     ip: "15.235.227.59"
     p2p_port: 18189
     grpc_port: 18142
-  - name: seed-10
+  - name: seed-06
     tier: seed
     pubkey: "0ee1692c9356d8e0e898846284736646a9e63ed36f281a29bbdea66757b9fe07"
     ip: "15.235.228.36"
+    p2p_port: 18189
+    grpc_port: 18142
+  - name: seed-07
+    tier: seed
+    pubkey: "a841efcd8bc47d3db9e658f5da4d6858b6cbd387812d84f9f7a98e8cc871a85e"
+    ip: "23.226.69.178"
+    p2p_port: 18189
+    grpc_port: 18142
+  - name: seed-08
+    tier: seed
+    pubkey: "96beda7ec490ec05df2ea53d1be8019072abd0d470bbd2dbb750ee59e9474816"
+    ip: "23.226.69.234"
+    p2p_port: 18189
+    grpc_port: 18142
+  - name: seed-09
+    tier: seed
+    pubkey: "8cdbe322e22470a07bfeca21149b35024b51cbe46acb291705dbc660402c8664"
+    ip: "107.167.84.90"
     p2p_port: 18189
     grpc_port: 18142
   - name: priority-01
